@@ -1,10 +1,15 @@
 package extimplement;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.StateListDrawable;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -82,9 +87,6 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 	public void onPropertiesChanged(Map<String, String> _changedValues) {
 		DoUIModuleHelper.handleBasicViewProperChanged(this.model, _changedValues);
 
-//		this.registProperty(new DoProperty("numColumns", PropertyDataType.Number, "", true));
-//		this.registProperty(new DoProperty("cellTemplates", PropertyDataType.String, "", true));
-
 		if (_changedValues.containsKey("isShowbar")) {
 			boolean _isShowbar = DoTextHelper.strToBool(_changedValues.get("isShowbar"), true);
 			this.setVerticalScrollBarEnabled(_isShowbar);
@@ -102,7 +104,16 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 			this.setNumColumns(_numColumns);
 		}
 		if (_changedValues.containsKey("selectedColor")) {
-			this.setSelector(DoUIModuleHelper.getColorFromString(_changedValues.get("selectedColor"), Color.WHITE));
+			try {
+				String _bgColor = this.model.getPropertyValue("bgColor");
+				String _selectedColor = _changedValues.get("selectedColor");
+				Drawable normal = new ColorDrawable(DoUIModuleHelper.getColorFromString(_bgColor, Color.WHITE));
+				Drawable selected = new ColorDrawable(DoUIModuleHelper.getColorFromString(_selectedColor, Color.WHITE));
+				Drawable pressed = new ColorDrawable(DoUIModuleHelper.getColorFromString(_selectedColor, Color.WHITE));
+				this.setSelector(getBg(normal, selected, pressed));
+			} catch (Exception _err) {
+				DoServiceContainer.getLogEngine().writeError("do_GridView selectedColor \n\t", _err);
+			}
 		}
 
 		if (_changedValues.containsKey("cellTemplates")) {
@@ -210,7 +221,7 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 
 	private class MyAdapter extends BaseAdapter {
 		private Map<String, String> viewTemplates = new HashMap<String, String>();
-		private Map<String, Integer> templatesPositionMap = new HashMap<String, Integer>();
+		private List<String> cellTemplates = new ArrayList<String>();
 		private Map<Integer, Integer> datasPositionMap = new HashMap<Integer, Integer>();
 		private DoIListData data;
 
@@ -219,15 +230,13 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 		}
 
 		public void initTemplates(String[] templates) throws Exception {
-			templatesPositionMap.clear();
-			int index = 0;
+			cellTemplates.clear();
 			for (String templateUi : templates) {
 				if (templateUi != null && !templateUi.equals("")) {
 					DoSourceFile _sourceFile = model.getCurrentPage().getCurrentApp().getSourceFS().getSourceByFileName(templateUi);
 					if (_sourceFile != null) {
 						viewTemplates.put(templateUi, _sourceFile.getTxtContent());
-						templatesPositionMap.put(templateUi, index);
-						index++;
+						cellTemplates.add(templateUi);
 					} else {
 						throw new Exception("试图使用一个无效的页面文件:" + templateUi);
 					}
@@ -235,26 +244,26 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 			}
 		}
 
-//		@Override
-//		public void notifyDataSetChanged() {
-//			int _size = data.size();
-//			for (int i = 0; i < _size; i++) {
-//				DoJsonValue childData = data.get(i);
-//				try {
-//					Integer index = templatesPositionMap.get(childData.getNode().getOneText("cell", ""));
-//					if (index == null) {
-//						index = 0;
-//					}
-//					datasPositionMap.put(i, index);
-//				} catch (Exception e) {
-//					DoServiceContainer.getLogEngine().writeError("解析data数据错误： \t", e);
-//				}
-//			}
-//			super.notifyDataSetChanged();
-//		}
+		@Override
+		public void notifyDataSetChanged() {
+			int _size = data.getCount();
+			for (int i = 0; i < _size; i++) {
+				DoJsonValue childData = (DoJsonValue) data.getData(i);
+				try {
+					Integer index = DoTextHelper.strToInt(childData.getNode().getOneText("cellTemplate", "0"), 0);
+					datasPositionMap.put(i, index);
+				} catch (Exception e) {
+					DoServiceContainer.getLogEngine().writeError("解析data数据错误： \t", e);
+				}
+			}
+			super.notifyDataSetChanged();
+		}
 
 		@Override
 		public int getCount() {
+			if (data == null) {
+				return 0;
+			}
 			return data.getCount();
 		}
 
@@ -275,7 +284,7 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 
 		@Override
 		public int getViewTypeCount() {
-			return templatesPositionMap.size();
+			return cellTemplates.size();
 		}
 
 		@Override
@@ -283,12 +292,8 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 			DoJsonValue childData = (DoJsonValue) data.getData(position);
 			try {
 				DoIUIModuleView _doIUIModuleView = null;
-				String templateUI = childData.getNode().getOneText("cell", "");
-				Integer index = 0;
-				index = templatesPositionMap.get(childData.getNode().getOneText("cell", ""));
-				if (index == null) {
-					index = 0;
-				}
+				int _index = DoTextHelper.strToInt(childData.getNode().getOneText("cellTemplate", "0"), 0);
+				String templateUI = cellTemplates.get(_index);
 				if (convertView == null) {
 					String content = viewTemplates.get(templateUI);
 					DoUIContainer _doUIContainer = new DoUIContainer(model.getCurrentPage());
@@ -299,33 +304,7 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 					_doIUIModuleView = (DoIUIModuleView) convertView;
 				}
 				if (_doIUIModuleView != null) {
-					DoUIContainer doUIContainer = _doIUIModuleView.getModel().getCurrentUIContainer();
-
-					Map<String, DoJsonValue> mapKeyValues = childData.getNode().getAllKeyValues();
-					for (String key : mapKeyValues.keySet()) {
-						if (key != null && !key.equals("cell")) {
-							DoUIModule doUIModule = doUIContainer.getChildUIModuleByID(key);
-							if (doUIModule != null) {
-								Map<String, String> _changedValues = new HashMap<String, String>();
-
-								DoJsonValue _DoJsonValue = mapKeyValues.get(key);
-								Map<String, DoJsonValue> mapPropertyValues = _DoJsonValue.getNode().getAllKeyValues();
-								for (String propertyName : mapPropertyValues.keySet()) {
-									_changedValues.put(propertyName, mapPropertyValues.get(propertyName).getText(""));
-								}
-								if (!doUIModule.onPropertiesChanging(_changedValues)) {
-									continue;
-								}
-								for (String _name : _changedValues.keySet()) {
-									if (_name == null || _name.length() <= 0)
-										continue;
-									doUIModule.setPropertyValue(_name, _changedValues.get(_name));
-								}
-								doUIModule.onPropertiesChanged(_changedValues);
-							}
-						}
-					}
-
+					_doIUIModuleView.getModel().setModelData(null, childData);
 					return (View) _doIUIModuleView;
 				}
 			} catch (Exception e) {
@@ -346,22 +325,34 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 
 	@Override
 	public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-		doGridView_LongTouch();
+		doGridView_LongTouch(position);
 		return true;
 	}
 
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-		doGridView_Touch();
+		doGridView_Touch(position);
 	}
 
-	private void doGridView_Touch() {
+	private void doGridView_Touch(int position) {
 		DoInvokeResult _invokeResult = new DoInvokeResult(this.model.getUniqueKey());
+		_invokeResult.setResultInteger(position);
 		this.model.getEventCenter().fireEvent("touch", _invokeResult);
 	}
 
-	private void doGridView_LongTouch() {
+	private void doGridView_LongTouch(int position) {
 		DoInvokeResult _invokeResult = new DoInvokeResult(this.model.getUniqueKey());
+		_invokeResult.setResultInteger(position);
 		this.model.getEventCenter().fireEvent("longTouch", _invokeResult);
+	}
+
+	private StateListDrawable getBg(Drawable normal, Drawable selected, Drawable pressed) {
+		StateListDrawable bg = new StateListDrawable();
+		bg.addState(View.PRESSED_ENABLED_STATE_SET, pressed);
+		bg.addState(View.ENABLED_FOCUSED_STATE_SET, selected);
+		bg.addState(View.ENABLED_STATE_SET, normal);
+		bg.addState(View.FOCUSED_STATE_SET, selected);
+		bg.addState(View.EMPTY_STATE_SET, normal);
+		return bg;
 	}
 }

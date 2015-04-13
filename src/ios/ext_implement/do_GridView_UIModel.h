@@ -7,6 +7,6 @@
 //
 #import "doUIModuleCollection.h"
 
-@interface do_GridView_UIModel : doUIModuleCollection
+@interface do_GridView_UIModel : doUIModule
 
 @end

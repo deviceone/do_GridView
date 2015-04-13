@@ -12,19 +12,45 @@
 #import "doUIModuleHelper.h"
 #import "doScriptEngineHelper.h"
 #import "doIScriptEngine.h"
+#import "doIListData.h"
+#import "doIPage.h"
+#import "doIApp.h"
+#import "doISourceFS.h"
+#import "doTextHelper.h"
+#import "doUIContainer.h"
 
 @implementation do_GridView_UIView
+{
+    NSMutableDictionary *_cellTemplatesDics;
+    id<doIListData> _dataArrays;
+    int _row;
+    int _column;
+    float _vSpace;
+    float _hSpace;
+}
 #pragma mark - doIUIModuleView协议方法（必须）
 //引用Model对象
 - (void) LoadView: (doUIModule *) _doUIModule
 {
     _model = (typeof(_model)) _doUIModule;
+    self.separatorStyle = UITableViewCellSeparatorStyleNone;
+    self.bounces=NO;//禁止拖动
+    _cellTemplatesDics = [[NSMutableDictionary alloc]init];
+    self.delegate = self;
+    self.dataSource = self;
+
 }
 //销毁所有的全局对象
 - (void) OnDispose
 {
     _model = nil;
     //自定义的全局属性
+    [ (doModule*)_dataArrays Dispose];
+    for(int i =0;i<_cellTemplatesDics.count;i++){
+        [(doModule*) _cellTemplatesDics Dispose];
+    }
+    [_cellTemplatesDics removeAllObjects];
+    _cellTemplatesDics = nil;
 }
 //实现布局
 - (void) OnRedraw
@@ -35,15 +61,6 @@
     [doUIModuleHelper OnRedraw:_model];
 }
 
-#pragma mark - doUIModuleCollection类及其子类允许在自身View上添加view，由于前端设计器是IDE实现。在运行时需要用代码将子组件添加到对应的容器中
-- (void)setChildsView
-{
-    for (doUIModule *childModel in _model.ChildUIModules)
-    {
-        UIView *childView = (UIView *)childModel.CurrentUIModuleView;
-        [self addSubview:childView];
-    }
-}
 #pragma mark - TYPEID_IView协议方法（必须）
 #pragma mark - Changed_属性
 /*
@@ -56,10 +73,32 @@
 - (void)change_cellTemplates:(NSString *)newValue
 {
     //自己的代码实现
+    NSArray *arrays = [newValue componentsSeparatedByString:@","];
+    [_cellTemplatesDics removeAllObjects];
+    for(int i=0;i<arrays.count;i++)
+    {
+        NSString *modelStr = arrays[i];
+        if(modelStr != nil && ![modelStr isEqualToString:@""])
+        {
+            doSourceFile *source = [[[_model.CurrentPage CurrentApp] SourceFS] GetSourceByFileName:modelStr];
+            if(!source)
+                [NSException raise:@"gridview" format:@"试图使用无效的页面文件",nil];
+            doUIContainer* _container = [[doUIContainer alloc] init:_model.CurrentPage];
+            
+            [_container LoadFromFile:source:nil:nil];
+            doUIModule* _insertViewModel = _container.RootView;
+            if (_insertViewModel == nil) {
+                [NSException raise:@"gridview" format:@"创建view失败",nil];
+            }
+            _cellTemplatesDics[modelStr] = _insertViewModel;
+            
+        }
+    }
 }
 - (void)change_hSpacing:(NSString *)newValue
 {
     //自己的代码实现
+    _hSpace = [[doTextHelper Instance] StrToFloat:newValue :0];
 }
 - (void)change_isShowbar:(NSString *)newValue
 {
@@ -68,6 +107,8 @@
 - (void)change_numColumns:(NSString *)newValue
 {
     //自己的代码实现
+    _column = [[doTextHelper Instance] StrToInt:newValue :1];
+    _row = (int)([_dataArrays GetCount]/_column);
 }
 - (void)change_selectedColor:(NSString *)newValue
 {
@@ -76,56 +117,96 @@
 - (void)change_vSpacing:(NSString *)newValue
 {
     //自己的代码实现
+    _vSpace = [[doTextHelper Instance] StrToFloat:newValue :0];
 }
 
 #pragma mark -
-#pragma mark - 同步异步方法的实现
-/*
-    1.参数节点
-        doJsonNode *_dictParas = [parms objectAtIndex:0];
-        在节点中，获取对应的参数
-        NSString *title = [_dictParas GetOneText:@"title" :@"" ];
-        说明：第一个参数为对象名，第二为默认值
- 
-    2.脚本运行时的引擎
-        id<doIScriptEngine> _scritEngine = [parms objectAtIndex:1];
- 
- 同步：
-    3.同步回调对象(有回调需要添加如下代码)
-        doInvokeResult *_invokeResult = [parms objectAtIndex:2];
-        回调信息
-        如：（回调一个字符串信息）
-        [_invokeResult SetResultText:((doUIModule *)_model).UniqueKey];
- 异步：
-    3.获取回调函数名(异步方法都有回调)
-        NSString *_callbackName = [parms objectAtIndex:2];
-        在合适的地方进行下面的代码，完成回调
-        新建一个回调对象
-        doInvokeResult *_invokeResult = [[doInvokeResult alloc] init];
-        填入对应的信息
-        如：（回调一个字符串）
-        [_invokeResult SetResultText: @"异步方法完成"];
-        [_scritEngine Callback:_callbackName :_invokeResult];
- */
-//同步
- - (void)bindData:(NSArray *)parms
- {
-     doJsonNode *_dictParas = [parms objectAtIndex:0];
-     id<doIScriptEngine> _scritEngine = [parms objectAtIndex:1];
-     doInvokeResult *_invokeResult = [parms objectAtIndex:2];
-     //构建_invokeResult的内容
-     
-     //自己的代码实现
- }
- - (void)refresh:(NSArray *)parms
- {
-     doJsonNode *_dictParas = [parms objectAtIndex:0];
-     id<doIScriptEngine> _scritEngine = [parms objectAtIndex:1];
-     doInvokeResult *_invokeResult = [parms objectAtIndex:2];
-     //构建_invokeResult的内容
-     
-     //自己的代码实现
- }
+#pragma mark - private
+-(void) SetModelData:(id<doIListData>) _jsonObject
+{
+    if(_dataArrays!= _jsonObject)
+        _dataArrays = _jsonObject;
+    [self reloadData];
+}
+#pragma mark - tableView sourcedelegate
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    return [_dataArrays GetCount]/_column;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    NSString* indentify = @"";
+    NSMutableArray* fileNames = [[NSMutableArray alloc] initWithCapacity:_column];
+    NSMutableArray* modules = [[NSMutableArray alloc] initWithCapacity:_column];
+    for(int i=0;i<_column;i++)
+    {
+        doJsonValue *jsonValue = [_dataArrays GetData:((int)indexPath.row)*_column+i];
+        doJsonNode *dataNode = [jsonValue GetNode];
+        int cellIndex = [dataNode GetOneInteger:@"cellTemplate" :0];
+        fileNames[i] = [_cellTemplatesDics allKeys][cellIndex];
+        indentify = [indentify stringByAppendingString:fileNames[i]];
+    }
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:indentify];
+    if(cell == nil)
+    {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:indentify];
+        float width = (self.frame.size.width - (_column+1)*_hSpace*_model.XZoom)/_column;
+        for(int i=0;i<_column;i++)
+        {
+            doSourceFile *source = [[[_model.CurrentPage CurrentApp] SourceFS] GetSourceByFileName:fileNames[i]];
+            id<doIPage> pageModel = _model.CurrentPage;
+            doUIContainer *container = [[doUIContainer alloc] init:pageModel];
+            [container LoadFromFile:source:nil:nil];
+            modules[i] = container.RootView;
+            [container LoadDefalutScriptFile:fileNames[i]];
+            UIView *insertView = (UIView*)(((doUIModule*)modules[i]).CurrentUIModuleView);
+            id<doIUIModuleView> modelView =((doUIModule*) modules[i]).CurrentUIModuleView;
+            [modelView OnRedraw];
+            insertView.frame = CGRectMake(_hSpace*_model.XZoom+width*i, _vSpace*_model.YZoom, width, insertView.frame.size.height);
+            [[cell contentView] addSubview:insertView];
+        }
+    }
+    else
+    {
+        for(int i=0;i<_column;i++)
+        {
+        modules[i] = [(id<doIUIModuleView>)[cell.contentView.subviews objectAtIndex:i] GetModel];
+        }
+    }
+    for(int i=0;i<_column;i++)
+    {
+        doJsonValue *jsonValue = [_dataArrays GetData:((int)indexPath.row)*_column+i];
+        [modules[i] SetModelData:nil :jsonValue];
+    }
+    return cell;
+}
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    NSLog(@"%s",__func__);
+    //不能响应一行的点击事件，需要相应每一行多个item单独的点击事件
+}
+
+#pragma mark - tableView delegate
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    float maxHeight = 0;
+    for(int i=0;i<_column;i++)
+    {
+        doJsonValue *jsonValue = [_dataArrays GetData:((int)indexPath.row)*_column+i];
+        doJsonNode *dataNode = [jsonValue GetNode];
+        int cellIndex = [dataNode GetOneInteger:@"cellTemplate" :0];
+        NSString* indentify = [_cellTemplatesDics allKeys][cellIndex];
+        doUIModule*  model = _cellTemplatesDics[indentify];
+        [model SetModelData:nil :jsonValue ];
+        [model.CurrentUIModuleView OnRedraw];
+        float height = ((UIView*)model.CurrentUIModuleView).frame.size.height;
+        if(height>maxHeight)
+            maxHeight = height;
+    }
+    return maxHeight+_vSpace*_model.YZoom;
+}
 
 #pragma mark - doIUIModuleView协议方法（必须）<大部分情况不需修改>
 - (BOOL) OnPropertiesChanging: (NSMutableDictionary *) _changedValues

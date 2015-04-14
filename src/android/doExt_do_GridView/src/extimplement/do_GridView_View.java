@@ -16,7 +16,6 @@ import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
 import core.DoServiceContainer;
-import core.helper.DoScriptEngineHelper;
 import core.helper.DoTextHelper;
 import core.helper.DoUIModuleHelper;
 import core.helper.jsonparse.DoJsonNode;
@@ -25,7 +24,6 @@ import core.interfaces.DoIListData;
 import core.interfaces.DoIScriptEngine;
 import core.interfaces.DoIUIModuleView;
 import core.object.DoInvokeResult;
-import core.object.DoMultitonModule;
 import core.object.DoSourceFile;
 import core.object.DoUIContainer;
 import core.object.DoUIModule;
@@ -133,14 +131,6 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 	 */
 	@Override
 	public boolean invokeSyncMethod(String _methodName, DoJsonNode _dictParas, DoIScriptEngine _scriptEngine, DoInvokeResult _invokeResult) throws Exception {
-		if ("bindData".equals(_methodName)) {
-			bindData(_dictParas, _scriptEngine, _invokeResult);
-			return true;
-		}
-		if ("refresh".equals(_methodName)) {
-			refresh(_dictParas, _scriptEngine, _invokeResult);
-			return true;
-		}
 		return false;
 	}
 
@@ -186,37 +176,6 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 		} catch (Exception e) {
 			DoServiceContainer.getLogEngine().writeError("解析cell属性错误： \t", e);
 		}
-	}
-
-	/**
-	 * 绑定数据；
-	 * 
-	 * @_dictParas 参数（K,V），可以通过此对象提供相关方法来获取参数值（Key：为参数名称）；
-	 * @_scriptEngine 当前Page JS上下文环境对象
-	 * @_invokeResult 用于返回方法结果对象
-	 */
-	@Override
-	public void bindData(DoJsonNode _dictParas, DoIScriptEngine _scriptEngine, DoInvokeResult _invokeResult) throws Exception {
-		String _address = _dictParas.getOneText("data", "");
-		if (_address == null || _address.length() <= 0)
-			throw new Exception("未指定相关的DataModel参数！");
-		DoMultitonModule _multitonModule = DoScriptEngineHelper.parseMultitonModule(_scriptEngine, _address);
-		if (_multitonModule == null || !(_multitonModule instanceof DoIListData))
-			throw new Exception("model参数无效!");
-		DoIListData _listData = (DoIListData) _multitonModule;
-		myAdapter.bindData(_listData);
-	}
-
-	/**
-	 * 数据改变后，刷新界面数据；
-	 * 
-	 * @_dictParas 参数（K,V），可以通过此对象提供相关方法来获取参数值（Key：为参数名称）；
-	 * @_scriptEngine 当前Page JS上下文环境对象
-	 * @_invokeResult 用于返回方法结果对象
-	 */
-	@Override
-	public void refresh(DoJsonNode _dictParas, DoIScriptEngine _scriptEngine, DoInvokeResult _invokeResult) throws Exception {
-		myAdapter.notifyDataSetChanged();
 	}
 
 	private class MyAdapter extends BaseAdapter {
@@ -354,5 +313,15 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 		bg.addState(View.FOCUSED_STATE_SET, selected);
 		bg.addState(View.EMPTY_STATE_SET, normal);
 		return bg;
+	}
+
+	public void setModelData(Object _obj) {
+		if (_obj == null)
+			return;
+		if (_obj instanceof DoIListData) {
+			DoIListData _listData = (DoIListData) _obj;
+			myAdapter.bindData(_listData);
+			myAdapter.notifyDataSetChanged();
+		}
 	}
 }

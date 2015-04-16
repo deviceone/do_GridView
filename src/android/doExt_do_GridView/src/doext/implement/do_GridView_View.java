@@ -1,4 +1,4 @@
-package extimplement;
+package doext.implement;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,8 +27,8 @@ import core.object.DoInvokeResult;
 import core.object.DoSourceFile;
 import core.object.DoUIContainer;
 import core.object.DoUIModule;
-import extdefine.do_GridView_IMethod;
-import extdefine.do_GridView_MAbstract;
+import doext.define.do_GridView_IMethod;
+import doext.define.do_GridView_MAbstract;
 
 /**
  * 自定义扩展UIView组件实现类，此类必须继承相应VIEW类，并实现DoIUIModuleView,do_GridView_IMethod接口；

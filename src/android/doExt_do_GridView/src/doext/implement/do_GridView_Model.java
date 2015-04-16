@@ -1,10 +1,10 @@
-package extimplement;
+package doext.implement;
 
 import java.util.Map;
 
 import core.helper.jsonparse.DoJsonValue;
 import core.interfaces.DoIListData;
-import extdefine.do_GridView_MAbstract;
+import doext.define.do_GridView_MAbstract;
 
 /**
  * 自定义扩展组件Model实现，继承do_GridView_MAbstract抽象类；

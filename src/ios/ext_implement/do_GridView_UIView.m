@@ -18,15 +18,18 @@
 #import "doISourceFS.h"
 #import "doTextHelper.h"
 #import "doUIContainer.h"
+#import "Math.h"
 
 @implementation do_GridView_UIView
 {
     NSMutableDictionary *_cellTemplatesDics;
+    NSMutableArray* modulesArray;
     id<doIListData> _dataArrays;
     int _row;
     int _column;
     float _vSpace;
     float _hSpace;
+    float _columnHeight;
 }
 #pragma mark - doIUIModuleView协议方法（必须）
 //引用Model对象
@@ -36,6 +39,7 @@
     self.separatorStyle = UITableViewCellSeparatorStyleNone;
     self.bounces=NO;//禁止拖动
     _cellTemplatesDics = [[NSMutableDictionary alloc]init];
+    modulesArray = [[NSMutableArray alloc]init];
     self.delegate = self;
     self.dataSource = self;
 
@@ -46,11 +50,16 @@
     _model = nil;
     //自定义的全局属性
     [ (doModule*)_dataArrays Dispose];
-    for(int i =0;i<_cellTemplatesDics.count;i++){
-        [(doModule*) _cellTemplatesDics Dispose];
+    for(doModule* module in [_cellTemplatesDics allValues]){
+        [module Dispose];
     }
     [_cellTemplatesDics removeAllObjects];
     _cellTemplatesDics = nil;
+    for(int i =0;i<modulesArray.count;i++){
+        [(doModule*) modulesArray[i] Dispose];
+    }
+    [modulesArray removeAllObjects];
+    modulesArray = nil;
 }
 //实现布局
 - (void) OnRedraw
@@ -127,11 +136,25 @@
     if(_dataArrays!= _jsonObject)
         _dataArrays = _jsonObject;
     [self reloadData];
+    
+    if([self isAutoHeight])
+    {
+        int row =[self getRowCount];
+        [self setFrame:CGRectMake(self.frame.origin.x, self.frame.origin.y, self.frame.size.width, row*_columnHeight)];
+    }
+}
+-(BOOL) isAutoHeight
+{
+    return [[_model GetPropertyValue:@"height"] isEqualToString:@"-1"];
+}
+-(int) getRowCount
+{
+    return ceil ((double)[_dataArrays GetCount]/(double)_column);
 }
 #pragma mark - tableView sourcedelegate
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
-    return [_dataArrays GetCount]/_column;
+    return [self getRowCount];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
@@ -141,7 +164,10 @@
     NSMutableArray* modules = [[NSMutableArray alloc] initWithCapacity:_column];
     for(int i=0;i<_column;i++)
     {
-        doJsonValue *jsonValue = [_dataArrays GetData:((int)indexPath.row)*_column+i];
+        int index = ((int)indexPath.row)*_column+i;
+        if(index>=[_dataArrays GetCount])
+            break;
+        doJsonValue *jsonValue = [_dataArrays GetData:index];
         doJsonNode *dataNode = [jsonValue GetNode];
         int cellIndex = [dataNode GetOneInteger:@"cellTemplate" :0];
         fileNames[i] = [_cellTemplatesDics allKeys][cellIndex];
@@ -154,11 +180,15 @@
         float width = (self.frame.size.width - (_column+1)*_hSpace*_model.XZoom)/_column;
         for(int i=0;i<_column;i++)
         {
+            int index = ((int)indexPath.row)*_column+i;
+            if(index>=[_dataArrays GetCount])
+                break;
             doSourceFile *source = [[[_model.CurrentPage CurrentApp] SourceFS] GetSourceByFileName:fileNames[i]];
             id<doIPage> pageModel = _model.CurrentPage;
             doUIContainer *container = [[doUIContainer alloc] init:pageModel];
             [container LoadFromFile:source:nil:nil];
             modules[i] = container.RootView;
+            [modulesArray addObject:modules[i]];
             [container LoadDefalutScriptFile:fileNames[i]];
             UIView *insertView = (UIView*)(((doUIModule*)modules[i]).CurrentUIModuleView);
             id<doIUIModuleView> modelView =((doUIModule*) modules[i]).CurrentUIModuleView;
@@ -171,11 +201,17 @@
     {
         for(int i=0;i<_column;i++)
         {
-        modules[i] = [(id<doIUIModuleView>)[cell.contentView.subviews objectAtIndex:i] GetModel];
+            int index = ((int)indexPath.row)*_column+i;
+            if(index>=[_dataArrays GetCount])
+                break;
+            modules[i] = [(id<doIUIModuleView>)[cell.contentView.subviews objectAtIndex:i] GetModel];
         }
     }
     for(int i=0;i<_column;i++)
     {
+        int index = ((int)indexPath.row)*_column+i;
+        if(index>=[_dataArrays GetCount])
+            break;
         doJsonValue *jsonValue = [_dataArrays GetData:((int)indexPath.row)*_column+i];
         [modules[i] SetModelData:nil :jsonValue];
     }
@@ -194,6 +230,9 @@
     float maxHeight = 0;
     for(int i=0;i<_column;i++)
     {
+        int index = ((int)indexPath.row)*_column+i;
+        if(index>=[_dataArrays GetCount])
+            break;
         doJsonValue *jsonValue = [_dataArrays GetData:((int)indexPath.row)*_column+i];
         doJsonNode *dataNode = [jsonValue GetNode];
         int cellIndex = [dataNode GetOneInteger:@"cellTemplate" :0];
@@ -205,7 +244,8 @@
         if(height>maxHeight)
             maxHeight = height;
     }
-    return maxHeight+_vSpace*_model.YZoom;
+    _columnHeight = maxHeight+_vSpace*_model.YZoom;
+    return _columnHeight;
 }
 
 #pragma mark - doIUIModuleView协议方法（必须）<大部分情况不需修改>

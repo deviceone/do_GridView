@@ -23,6 +23,7 @@
 @implementation do_GridView_UIView
 {
     NSMutableDictionary *_cellTemplatesDics;
+    NSMutableArray* _cellTemplatesArray;
     NSMutableArray* modulesArray;
     id<doIListData> _dataArrays;
     int _row;
@@ -40,6 +41,7 @@
     self.bounces=NO;//禁止拖动
     _cellTemplatesDics = [[NSMutableDictionary alloc]init];
     modulesArray = [[NSMutableArray alloc]init];
+    _cellTemplatesArray =[[NSMutableArray alloc]init];
     self.delegate = self;
     self.dataSource = self;
 
@@ -60,6 +62,8 @@
     }
     [modulesArray removeAllObjects];
     modulesArray = nil;
+    [_cellTemplatesArray removeAllObjects];
+    _cellTemplatesArray = nil;
 }
 //实现布局
 - (void) OnRedraw
@@ -100,7 +104,7 @@
                 [NSException raise:@"gridview" format:@"创建view失败",nil];
             }
             _cellTemplatesDics[modelStr] = _insertViewModel;
-            
+            [_cellTemplatesArray addObject:modelStr];
         }
     }
 }
@@ -170,7 +174,7 @@
         doJsonValue *jsonValue = [_dataArrays GetData:index];
         doJsonNode *dataNode = [jsonValue GetNode];
         int cellIndex = [dataNode GetOneInteger:@"cellTemplate" :0];
-        fileNames[i] = [_cellTemplatesDics allKeys][cellIndex];
+        fileNames[i] = _cellTemplatesArray[cellIndex];
         indentify = [indentify stringByAppendingString:fileNames[i]];
     }
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:indentify];
@@ -236,7 +240,7 @@
         doJsonValue *jsonValue = [_dataArrays GetData:((int)indexPath.row)*_column+i];
         doJsonNode *dataNode = [jsonValue GetNode];
         int cellIndex = [dataNode GetOneInteger:@"cellTemplate" :0];
-        NSString* indentify = [_cellTemplatesDics allKeys][cellIndex];
+        NSString* indentify = _cellTemplatesArray[cellIndex];
         doUIModule*  model = _cellTemplatesDics[indentify];
         [model SetModelData:nil :jsonValue ];
         [model.CurrentUIModuleView OnRedraw];

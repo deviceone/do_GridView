@@ -132,21 +132,33 @@
     //自己的代码实现
     _vSpace = [[doTextHelper Instance] StrToFloat:newValue :0];
 }
-
 #pragma mark -
-#pragma mark - private
--(void) SetModelData:(id<doIListData>) _jsonObject
+#pragma mark - 同步异步方法的实现
+- (void) bindItems: (NSArray*) parms
 {
-    if(_dataArrays!= _jsonObject)
-        _dataArrays = _jsonObject;
+    doJsonNode * _dictParas = [parms objectAtIndex:0];
+    id<doIScriptEngine> _scriptEngine= [parms objectAtIndex:1];
+    NSString* _address = [_dictParas GetOneText:@"data": nil];
+    if (_address == nil || _address.length <= 0) [NSException raise:@"doGridView" format:@"未指定相关的gridview data参数！",nil];
+    id bindingModule = [doScriptEngineHelper ParseMultitonModule: _scriptEngine : _address];
+    if (bindingModule == nil) [NSException raise:@"doGridView" format:@"data参数无效！",nil];
+    if([bindingModule conformsToProtocol:@protocol(doIListData)])
+    {
+        if(_dataArrays!= bindingModule)
+            _dataArrays = bindingModule;
+    }
+}
+- (void) refreshItems: (NSArray*) parms
+{
     [self reloadData];
-    
     if([self isAutoHeight])
     {
         int row =[self getRowCount];
         [self setFrame:CGRectMake(self.frame.origin.x, self.frame.origin.y, self.frame.size.width, row*_columnHeight)];
     }
 }
+#pragma mark -
+#pragma mark - private
 -(BOOL) isAutoHeight
 {
     return [[_model GetPropertyValue:@"height"] isEqualToString:@"-1"];
@@ -217,7 +229,7 @@
         if(index>=[_dataArrays GetCount])
             break;
         doJsonValue *jsonValue = [_dataArrays GetData:((int)indexPath.row)*_column+i];
-        [modules[i] SetModelData:nil :jsonValue];
+        [modules[i] SetModelData:jsonValue];
     }
     return cell;
 }
@@ -242,7 +254,7 @@
         int cellIndex = [dataNode GetOneInteger:@"cellTemplate" :0];
         NSString* indentify = _cellTemplatesArray[cellIndex];
         doUIModule*  model = _cellTemplatesDics[indentify];
-        [model SetModelData:nil :jsonValue ];
+        [model SetModelData:jsonValue ];
         [model.CurrentUIModuleView OnRedraw];
         float height = ((UIView*)model.CurrentUIModuleView).frame.size.height;
         if(height>maxHeight)

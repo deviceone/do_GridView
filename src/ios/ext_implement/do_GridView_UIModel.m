@@ -26,14 +26,4 @@
 	[self RegistProperty:[[doProperty alloc]init:@"vSpacing" :Number :@"" :YES]];
 
 }
--(void) SetProperties: (NSMutableDictionary*) _changedValues
-{
-    if([[_changedValues allKeys]containsObject:@"cellDatas"])
-    {
-        do_GridView_UIView* view = (do_GridView_UIView*) self.CurrentUIModuleView;
-        [view  SetModelData:_changedValues[@"cellDatas"]];
-        [_changedValues removeObjectForKey:@"cellDatas"];
-    }
-    [super SetProperties:_changedValues ];
-}
 @end

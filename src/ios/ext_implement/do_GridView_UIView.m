@@ -88,6 +88,7 @@
     //自己的代码实现
     NSArray *arrays = [newValue componentsSeparatedByString:@","];
     [_cellTemplatesDics removeAllObjects];
+    [_cellTemplatesArray removeAllObjects];
     for(int i=0;i<arrays.count;i++)
     {
         NSString *modelStr = arrays[i];
@@ -185,7 +186,7 @@
             break;
         doJsonValue *jsonValue = [_dataArrays GetData:index];
         doJsonNode *dataNode = [jsonValue GetNode];
-        int cellIndex = [dataNode GetOneInteger:@"cellTemplate" :0];
+        int cellIndex = [dataNode GetOneInteger:@"template" :0];
         fileNames[i] = _cellTemplatesArray[cellIndex];
         indentify = [indentify stringByAppendingString:fileNames[i]];
     }

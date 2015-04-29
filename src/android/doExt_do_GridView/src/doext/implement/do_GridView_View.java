@@ -69,8 +69,8 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 	 */
 	@Override
 	public boolean onPropertiesChanging(Map<String, String> _changedValues) {
-		if (_changedValues.containsKey("cellTemplates")) {
-			String value = _changedValues.get("cellTemplates");
+		if (_changedValues.containsKey("templates")) {
+			String value = _changedValues.get("templates");
 			if ("".equals(value)) {
 				return false;
 			}
@@ -116,8 +116,8 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 			}
 		}
 
-		if (_changedValues.containsKey("cellTemplates")) {
-			initViewTemplate(_changedValues.get("cellTemplates"));
+		if (_changedValues.containsKey("templates")) {
+			initViewTemplate(_changedValues.get("templates"));
 			this.setAdapter(myAdapter);
 		}
 

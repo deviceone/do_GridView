@@ -18,22 +18,12 @@
 {
     [super OnInit];    
     //属性声明
-	[self RegistProperty:[[doProperty alloc]init:@"cellTemplates" :String :@"" :YES]];
+	[self RegistProperty:[[doProperty alloc]init:@"templates" :String :@"" :YES]];
 	[self RegistProperty:[[doProperty alloc]init:@"hSpacing" :Number :@"" :YES]];
 	[self RegistProperty:[[doProperty alloc]init:@"isShowbar" :Bool :@"true" :YES]];
 	[self RegistProperty:[[doProperty alloc]init:@"numColumns" :Number :@"" :YES]];
 	[self RegistProperty:[[doProperty alloc]init:@"selectedColor" :String :@"" :YES]];
 	[self RegistProperty:[[doProperty alloc]init:@"vSpacing" :Number :@"" :YES]];
 
-}
--(void) SetProperties: (NSMutableDictionary*) _changedValues
-{
-    if([[_changedValues allKeys]containsObject:@"cellDatas"])
-    {
-        do_GridView_UIView* view = (do_GridView_UIView*) self.CurrentUIModuleView;
-        [view  SetModelData:_changedValues[@"cellDatas"]];
-        [_changedValues removeObjectForKey:@"cellDatas"];
-    }
-    [super SetProperties:_changedValues ];
 }
 @end

@@ -8,7 +8,13 @@ import core.interfaces.DoISourceFS;
 import core.object.DoMultitonModule;
 
 public class DoApp implements DoIApp{
-
+	
+	@Override
+	public DoMultitonModule createMultitonModule(String _typeID, String _id) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
 	@Override
 	public boolean deleteMultitonModule(String arg0) {
 		// TODO Auto-generated method stub
@@ -59,12 +65,6 @@ public class DoApp implements DoIApp{
 
 	@Override
 	public DoISourceFS getSourceFS() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public DoMultitonModule createMultitonModule(String _typeID, String _id) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}

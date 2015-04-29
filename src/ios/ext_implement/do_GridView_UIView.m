@@ -83,7 +83,7 @@
  获取属性最初的默认值
  NSString *属性名 = [(doUIModule *)_model GetProperty:@"属性名"].DefaultValue;
  */
-- (void)change_cellTemplates:(NSString *)newValue
+- (void)change_templates:(NSString *)newValue
 {
     //自己的代码实现
     NSArray *arrays = [newValue componentsSeparatedByString:@","];
@@ -251,7 +251,7 @@
             break;
         doJsonValue *jsonValue = [_dataArrays GetData:((int)indexPath.row)*_column+i];
         doJsonNode *dataNode = [jsonValue GetNode];
-        int cellIndex = [dataNode GetOneInteger:@"cellTemplate" :0];
+        int cellIndex = [dataNode GetOneInteger:@"template" :0];
         NSString* indentify = _cellTemplatesArray[cellIndex];
         doUIModule*  model = _cellTemplatesDics[indentify];
         [model SetModelData:jsonValue ];

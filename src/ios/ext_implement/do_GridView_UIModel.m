@@ -18,7 +18,7 @@
 {
     [super OnInit];    
     //属性声明
-	[self RegistProperty:[[doProperty alloc]init:@"cellTemplates" :String :@"" :YES]];
+	[self RegistProperty:[[doProperty alloc]init:@"templates" :String :@"" :YES]];
 	[self RegistProperty:[[doProperty alloc]init:@"hSpacing" :Number :@"" :YES]];
 	[self RegistProperty:[[doProperty alloc]init:@"isShowbar" :Bool :@"true" :YES]];
 	[self RegistProperty:[[doProperty alloc]init:@"numColumns" :Number :@"" :YES]];

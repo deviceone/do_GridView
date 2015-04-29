@@ -18,7 +18,7 @@ public abstract class do_GridView_MAbstract extends DoUIModule{
 	public void onInit() throws Exception{
         super.onInit();
         //注册属性
-		this.registProperty(new DoProperty("cellTemplates", PropertyDataType.String, "", true));
+		this.registProperty(new DoProperty("templates", PropertyDataType.String, "", true));
 		this.registProperty(new DoProperty("hSpacing", PropertyDataType.Number, "", true));
 		this.registProperty(new DoProperty("isShowbar", PropertyDataType.Bool, "true", true));
 		this.registProperty(new DoProperty("numColumns", PropertyDataType.Number, "", true));

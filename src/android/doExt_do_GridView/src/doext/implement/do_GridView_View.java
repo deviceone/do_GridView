@@ -16,6 +16,7 @@ import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
 import core.DoServiceContainer;
+import core.helper.DoScriptEngineHelper;
 import core.helper.DoTextHelper;
 import core.helper.DoUIModuleHelper;
 import core.helper.jsonparse.DoJsonNode;
@@ -24,6 +25,7 @@ import core.interfaces.DoIListData;
 import core.interfaces.DoIScriptEngine;
 import core.interfaces.DoIUIModuleView;
 import core.object.DoInvokeResult;
+import core.object.DoMultitonModule;
 import core.object.DoSourceFile;
 import core.object.DoUIContainer;
 import core.object.DoUIModule;
@@ -131,6 +133,14 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 	 */
 	@Override
 	public boolean invokeSyncMethod(String _methodName, DoJsonNode _dictParas, DoIScriptEngine _scriptEngine, DoInvokeResult _invokeResult) throws Exception {
+		if ("bindItems".equals(_methodName)) {
+			bindItems(_dictParas, _scriptEngine, _invokeResult);
+			return true;
+		}
+		if ("refreshItems".equals(_methodName)) {
+			refreshItems(_dictParas, _scriptEngine, _invokeResult);
+			return true;
+		}
 		return false;
 	}
 
@@ -159,6 +169,23 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 	@Override
 	public void onDispose() {
 		// ...do something
+	}
+
+	private void refreshItems(DoJsonNode _dictParas, DoIScriptEngine _scriptEngine, DoInvokeResult _invokeResult) {
+		myAdapter.notifyDataSetChanged();
+	}
+
+	private void bindItems(DoJsonNode _dictParas, DoIScriptEngine _scriptEngine, DoInvokeResult _invokeResult) throws Exception {
+		String _address = _dictParas.getOneText("data", "");
+		if (_address == null || _address.length() <= 0)
+			throw new Exception("doListView 未指定相关的listview data参数！");
+		DoMultitonModule _multitonModule = DoScriptEngineHelper.parseMultitonModule(_scriptEngine, _address);
+		if (_multitonModule == null)
+			throw new Exception("doListView data参数无效！");
+		if (_multitonModule instanceof DoIListData) {
+			DoIListData _data = (DoIListData) _multitonModule;
+			myAdapter.bindData(_data);
+		}
 	}
 
 	/**
@@ -209,7 +236,7 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 			for (int i = 0; i < _size; i++) {
 				DoJsonValue childData = (DoJsonValue) data.getData(i);
 				try {
-					Integer index = DoTextHelper.strToInt(childData.getNode().getOneText("cellTemplate", "0"), 0);
+					Integer index = DoTextHelper.strToInt(childData.getNode().getOneText("template", "0"), 0);
 					datasPositionMap.put(i, index);
 				} catch (Exception e) {
 					DoServiceContainer.getLogEngine().writeError("解析data数据错误： \t", e);
@@ -251,7 +278,7 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 			DoJsonValue childData = (DoJsonValue) data.getData(position);
 			try {
 				DoIUIModuleView _doIUIModuleView = null;
-				int _index = DoTextHelper.strToInt(childData.getNode().getOneText("cellTemplate", "0"), 0);
+				int _index = DoTextHelper.strToInt(childData.getNode().getOneText("template", "0"), 0);
 				String templateUI = cellTemplates.get(_index);
 				if (convertView == null) {
 					String content = viewTemplates.get(templateUI);
@@ -263,7 +290,7 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 					_doIUIModuleView = (DoIUIModuleView) convertView;
 				}
 				if (_doIUIModuleView != null) {
-					_doIUIModuleView.getModel().setModelData(null, childData);
+					_doIUIModuleView.getModel().setModelData(childData);
 					return (View) _doIUIModuleView;
 				}
 			} catch (Exception e) {
@@ -313,15 +340,5 @@ public class do_GridView_View extends GridView implements DoIUIModuleView, do_Gr
 		bg.addState(View.FOCUSED_STATE_SET, selected);
 		bg.addState(View.EMPTY_STATE_SET, normal);
 		return bg;
-	}
-
-	public void setModelData(Object _obj) {
-		if (_obj == null)
-			return;
-		if (_obj instanceof DoIListData) {
-			DoIListData _listData = (DoIListData) _obj;
-			myAdapter.bindData(_listData);
-			myAdapter.notifyDataSetChanged();
-		}
 	}
 }

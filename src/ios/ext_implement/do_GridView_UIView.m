@@ -117,6 +117,13 @@
 - (void)change_isShowbar:(NSString *)newValue
 {
     //自己的代码实现
+    if ([newValue isEqualToString:@"false"]) {
+        self.showsVerticalScrollIndicator = NO;
+    }
+    else
+    {
+        self.showsVerticalScrollIndicator = YES;
+    }
 }
 - (void)change_numColumns:(NSString *)newValue
 {
